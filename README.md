@@ -42,6 +42,12 @@
       </ul>
     </li>
     <li>
+      <a href="#postgres-setup">Postgres Setup</a></li>
+      <ul>
+        <li><a href="#standalon-postgres">Docker</a></li>
+        <li><a href="#rds-postgres">Compile and run</a></li>
+      </ul>
+    <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
         <li><a href="#docker">Docker</a></li>
@@ -73,7 +79,49 @@ This project came about from MovingLake technological development. Webhooks dire
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Postgres Setup
 
+Pg_webhook uses a logical replication slot to get real-time data from the main database. As such a few configuration steps must be followed to allow this to happen
+
+### Standalone Postgres
+
+Use the following commands to get started. We'll create a database, a user and setup postgres to create a logical replication slot.
+
+```
+create database pg_webhook;
+create user pg_webhook with replication password 'pg_webhook';
+```
+
+Next you need to add some lines to Postgres' configuration files. If you do not know where this files are, you can run `ps -ef | grep postgres`. You shoud see a line such as:
+
+```
+/opt/homebrew/opt/postgresql/bin/postgres -D /opt/homebrew/var/postgres
+```
+
+The last piece of this line (`/opt/homebrew/var/postgres`)  is where your postgres configuration files will be stored. Now open `pg_hba.conf` and add the following line:
+
+```
+host replication pg_webhook 127.0.0.1/32 md5
+```
+
+Next open `postgres.conf` and add these following lines:
+
+```
+wal_level=logical
+max_wal_senders=5
+max_replication_slots=5
+```
+
+Finally when specifying the postgres DNS string when running pg_webhook, make sure it has the replication query parameter `?replication=database`. Eg `postgres://pg_webhook:pg_webhook@localhost:5432/pg_webhook?replication=database`
+
+
+### RDS Postgres
+
+RDS does not let you run with a real superuser, and also doesn't let you change the configuration files. Most likely because of multitenant systems. To circumvent this, the easiest way to go is to use Postgres extension `pglogical`.
+
+Please follow [this link](https://aws.amazon.com/blogs/database/part-2-upgrade-your-amazon-rds-for-postgresql-database-using-the-pglogical-extension/) to set-up your RDS instance with the extension. Also checkout [this other link](https://aws.amazon.com/premiumsupport/knowledge-center/rds-postgresql-resolve-preload-error/) if don't know how to turn on the preloaded libraries for RDS.
+
+Once you follow these steps, try and follow the rest from #standalone-postgres
 
 <!-- GETTING STARTED -->
 ## Getting Started
