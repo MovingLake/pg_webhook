@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	maxRetries = 2 // Around 22 hours.
+	maxRetries = 400 // Around 22 hours.
 )
 
 type Task struct {
