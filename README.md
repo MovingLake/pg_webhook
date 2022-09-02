@@ -57,6 +57,7 @@
     <li><a href="#system">System</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
+    <li><a href="#managed-version">Managed Version</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
@@ -169,6 +170,12 @@ Project Link: [https://github.com/movinglake/pg_webhook](https://github.com/movi
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+<!-- MANAGED VERSION -->
+## Managed Version
+
+If you ever want to have a managed version of this system built for scale and completely maintenance free then we'd be happy to accommodate your requests. Please use this [link](app.movinglake.com) to create a Postgres connector with a webhook destination.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 <!-- ACKNOWLEDGMENTS -->
