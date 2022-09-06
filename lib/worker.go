@@ -19,42 +19,32 @@ package lib
 
 import (
 	"bytes"
-	"context"
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/movinglake/pg_webhook/providers"
 )
 
 const (
-	maxRetries = 400 // Around 22 hours.
+	MaxRetries = 400 // Around 22 hours.
 )
 
-type Task struct {
-	Ctx     context.Context
-	Schema  string
-	Table   string
-	Verb    string
-	Values  map[string]interface{}
-	Retries int
-}
-
-func ProcessWebhookTasks(tasks chan Task, webhookServiceUrl string, db *sql.DB) {
+func ProcessWebhookTasks(tasks chan providers.Task, webhookServiceUrl string, handler providers.DbHandler, httpClient providers.HttpClient) {
 	for {
 		t := <-tasks
 
-		if t.Retries > maxRetries {
+		if t.Retries > MaxRetries {
 			log.Println("max retries reached, sending task to sqlite")
-			InsertTask(db, t)
+			handler.InsertTask(t)
 			continue
 		}
 
-		t.Values["verb"] = t.Verb
-		t.Values["schema"] = t.Schema
-		t.Values["table"] = t.Table
+		t.Values["_mlake_verb"] = t.Verb
+		t.Values["_mlake_schema"] = t.Schema
+		t.Values["_mlake_table"] = t.Table
 
 		outBytes, err := json.Marshal(t.Values)
 		if err != nil {
@@ -62,7 +52,7 @@ func ProcessWebhookTasks(tasks chan Task, webhookServiceUrl string, db *sql.DB) 
 			continue
 		}
 
-		resp, err := http.Post(webhookServiceUrl, "application/json", bytes.NewBuffer(outBytes))
+		resp, err := httpClient.Post(webhookServiceUrl, "application/json", bytes.NewBuffer(outBytes))
 
 		if err != nil {
 			log.Printf("failed to send to webhook service: %v", err)
@@ -78,45 +68,5 @@ func ProcessWebhookTasks(tasks chan Task, webhookServiceUrl string, db *sql.DB) 
 			tasks <- t
 			continue
 		}
-	}
-}
-
-func OpenDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "db.sqlite")
-
-	if err != nil {
-		log.Fatal(err)
-		return nil
-	}
-	return db
-}
-
-func InsertTask(db *sql.DB, t Task) {
-	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS tasks (schema TEXT, table_name TEXT, verb TEXT, values_table TEXT, retries INT)")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = stmt.Exec()
-	if err != nil {
-		log.Fatal(err)
-	}
-	stmt.Close()
-
-	stmt, err = db.Prepare("INSERT INTO tasks (schema, table_name, verb, values_table, retries) VALUES (?, ?, ?, ?, ?)")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-
-	// Neeed to convert map to json string
-	outBytes, err := json.Marshal(t.Values)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = stmt.Exec(t.Schema, t.Table, t.Verb, string(outBytes), t.Retries)
-	if err != nil {
-		log.Fatal(err)
 	}
 }

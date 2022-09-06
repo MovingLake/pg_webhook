@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgproto3/v2"
 	"github.com/jackc/pgtype"
 	"github.com/movinglake/pg_webhook/lib"
+	"github.com/movinglake/pg_webhook/providers"
 )
 
 const (
@@ -37,11 +38,21 @@ const (
 var (
 	pgDns                  = os.Getenv("PG_DNS")
 	webhookServiceUrl      = os.Getenv("WEBHOOK_SERVICE_URL")
+	slotName               = os.Getenv("REPLICATION_SLOT_NAME")
 	maxConsumerConcurrency = 100
 )
 
 func main() {
-	sysident, conn, err := lib.InitializeReplicationConnection(pgDns, outputPlugin)
+	if pgDns == "" {
+		log.Fatal("PG_DNS env variable is required")
+	}
+	if webhookServiceUrl == "" {
+		log.Fatal("WEBHOOK_SERVICE_URL env variable is required")
+	}
+	if slotName == "" {
+		slotName = "pg_webhook_slot"
+	}
+	sysident, conn, err := lib.InitializeReplicationConnection(pgDns, outputPlugin, slotName)
 	defer conn.Close(context.Background())
 	if err != nil {
 		log.Fatalln(err)
@@ -53,11 +64,13 @@ func main() {
 	relations := map[uint32]*pglogrepl.RelationMessage{}
 	connInfo := pgtype.NewConnInfo()
 
-	tasks := make(chan lib.Task)
-	db := lib.OpenDB()
-	defer db.Close()
+	tasks := make(chan providers.Task)
+	handler := &providers.SqliteHandler{}
+	httpClient := &providers.HttpClientImpl{}
+	handler.OpenDB()
+	defer handler.Close()
 	for i := 0; i < maxConsumerConcurrency; i++ {
-		go lib.ProcessWebhookTasks(tasks, webhookServiceUrl, db)
+		go lib.ProcessWebhookTasks(tasks, webhookServiceUrl, handler, httpClient)
 	}
 
 	for {
@@ -131,7 +144,7 @@ func main() {
 				values := lib.GetValuesFromColumns(logicalMsg.Tuple.Columns, rel, connInfo)
 				log.Printf("INSERT INTO %s.%s: %v", rel.Namespace, rel.RelationName, values)
 
-				tasks <- lib.Task{
+				tasks <- providers.Task{
 					Ctx:    ctx,
 					Schema: rel.Namespace,
 					Table:  rel.RelationName,
@@ -146,7 +159,7 @@ func main() {
 				}
 				values := lib.GetValuesFromColumns(logicalMsg.NewTuple.Columns, rel, connInfo)
 				log.Printf("UPDATE %s.%s: %v", rel.Namespace, rel.RelationName, values)
-				tasks <- lib.Task{
+				tasks <- providers.Task{
 					Ctx:    ctx,
 					Schema: rel.Namespace,
 					Table:  rel.RelationName,
@@ -160,7 +173,7 @@ func main() {
 				}
 				values := lib.GetValuesFromColumns(logicalMsg.OldTuple.Columns, rel, connInfo)
 				log.Printf("DELETE %s.%s: %v", rel.Namespace, rel.RelationName, values)
-				tasks <- lib.Task{
+				tasks <- providers.Task{
 					Ctx:    ctx,
 					Schema: rel.Namespace,
 					Table:  rel.RelationName,

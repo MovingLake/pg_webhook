@@ -26,31 +26,31 @@ import (
 	"github.com/jackc/pgtype"
 )
 
-func InitializeReplicationConnection(pgDns, outputPlugin string) (*pglogrepl.IdentifySystemResult, *pgconn.PgConn, error) {
+func InitializeReplicationConnection(pgDns, outputPlugin, slotName string) (*pglogrepl.IdentifySystemResult, *pgconn.PgConn, error) {
 	conn, err := pgconn.Connect(context.Background(), pgDns)
 	if err != nil {
 		log.Println("failed to connect to PostgreSQL server:", err)
 		return nil, nil, err
 	}
 
-	result := conn.Exec(context.Background(), "DROP PUBLICATION IF EXISTS pglogrepl_demo;")
+	result := conn.Exec(context.Background(), "DROP PUBLICATION IF EXISTS "+slotName+";")
 	_, err = result.ReadAll()
 	if err != nil {
 		log.Println("drop publication if exists error", err)
 		return nil, nil, err
 	}
 
-	result = conn.Exec(context.Background(), "CREATE PUBLICATION pglogrepl_demo FOR ALL TABLES;")
+	result = conn.Exec(context.Background(), "CREATE PUBLICATION "+slotName+" FOR ALL TABLES;")
 	_, err = result.ReadAll()
 	if err != nil {
 		log.Println("create publication error", err)
 		return nil, nil, err
 	}
-	log.Println("create publication pglogrepl_demo")
+	log.Println("create publication " + slotName)
 
 	var pluginArguments []string
 	if outputPlugin == "pgoutput" {
-		pluginArguments = []string{"proto_version '1'", "publication_names 'pglogrepl_demo'"}
+		pluginArguments = []string{"proto_version '1'", "publication_names '" + slotName + "'"}
 	} else if outputPlugin == "wal2json" {
 		pluginArguments = []string{"\"pretty-print\" 'true'"}
 	}
@@ -61,8 +61,6 @@ func InitializeReplicationConnection(pgDns, outputPlugin string) (*pglogrepl.Ide
 		return nil, nil, err
 	}
 	log.Println("SystemID:", sysident.SystemID, "Timeline:", sysident.Timeline, "XLogPos:", sysident.XLogPos, "DBName:", sysident.DBName)
-
-	slotName := "pglogrepl_demo"
 
 	_, err = pglogrepl.CreateReplicationSlot(context.Background(), conn, slotName, outputPlugin, pglogrepl.CreateReplicationSlotOptions{Temporary: true})
 	if err != nil {
