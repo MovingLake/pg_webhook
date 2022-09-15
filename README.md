@@ -193,7 +193,7 @@ helm upgrade --install my-pg-webhook \
   --namespace my-namespace \
   --set postgres.url="postgres://user:password@hostname:5432/postgres?replication=database" \
   --set webhook.url="https://my-webhook.com" \
-  charts/pg-webhook
+  movinglake/pg-webhook
 ```
 
 <!-- ACKNOWLEDGMENTS -->
