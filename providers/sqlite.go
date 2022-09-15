@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"os"
 )
 
 type Task struct {
@@ -26,12 +27,18 @@ type SqliteHandler struct {
 	db *sql.DB
 }
 
+var sqliteLocation = os.Getenv("SQLITE_LOCATION")
+
 func (s SqliteHandler) Close() {
 	s.db.Close()
 }
 
 func (s *SqliteHandler) OpenDB() {
-	newdb, err := sql.Open("sqlite3", "db.sqlite")
+	if sqliteLocation == "" {
+		log.Println("SQLITE_LOCATION not set, using default location")
+		sqliteLocation = "db.sqlite"
+	}
+	newdb, err := sql.Open("sqlite3", sqliteLocation)
 
 	if err != nil {
 		log.Fatal(err)

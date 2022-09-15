@@ -21,6 +21,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/jackc/pgconn"
@@ -71,6 +72,11 @@ func main() {
 	defer handler.Close()
 	for i := 0; i < maxConsumerConcurrency; i++ {
 		go lib.ProcessWebhookTasks(tasks, webhookServiceUrl, handler, httpClient)
+	}
+
+	// This simply creates an empty directory to be used by the kubernetes readiness probe.
+	if err := os.MkdirAll(filepath.Dir("/tmp/pg-webhook"), 0755); err != nil {
+		log.Fatal(err)
 	}
 
 	for {

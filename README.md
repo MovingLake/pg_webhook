@@ -178,6 +178,24 @@ If you ever want to have a managed version of this system built for scale and co
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
+## Install in Kubernetes via Helm
+
+Simply add our helm chart repository:
+
+```
+helm repo add movinglake https://movinglake.github.io/helmcharts/
+```
+
+Then install the chart:
+
+```
+helm upgrade --install my-pg-webhook \
+  --namespace my-namespace \
+  --set postgres.url="postgres://user:password@hostname:5432/postgres?replication=database" \
+  --set webhook.url="https://my-webhook.com" \
+  movinglake/pg-webhook
+```
+
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
