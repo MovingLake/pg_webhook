@@ -1,0 +1,47 @@
+{
+    "image": "mcr.microsoft.com/vscode/devcontainers/go:1.19",
+    "postCreateCommand": "bash .devcontainer/post_create.sh",
+    "features": {
+        "golang": "1.19",
+        "common": {
+            "username": "vscode",
+            "uid": "automatic",
+            "gid": "automatic",
+            "installZsh": true,
+            "installOhMyZsh": true,
+            "upgradePackages": true,
+            "nonFreePackages": false
+        },
+        "docker-in-docker": {
+            "version": "latest",
+            "moby": true,
+            "dockerDashComposeVersion": "v1"
+        },
+        "github-cli": "latest",
+        "aws-cli": "latest",
+        "kubectl-helm-minikube": {
+            "version": "latest",
+            "helm": "latest",
+            "minikube": "none"
+        }
+    },
+    "forwardPorts": [
+        8082
+    ],
+    "remoteUser": "vscode",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.Go",
+                "eamodio.gitlens",
+                "GitHub.copilot",
+                "GitHub.vscode-pull-request-github",
+                "streetsidesoftware.code-spell-checker",
+                "rangav.vscode-thunder-client"
+            ],
+            "settings": {
+                "editor.formatOnSave": true,
+            }
+        }
+    }
+}
